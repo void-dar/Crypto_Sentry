@@ -9,7 +9,6 @@ from ..config import settings
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 logger = logging.getLogger(__name__)
 
-# Module-level — same Application instance reused across requests
 _application = None
 
 
@@ -20,54 +19,55 @@ def get_application():
     return _application
 
 
-@router.post("/webhook")
-async def telegram_webhook(request: Request) -> Response:
-    """
-    Telegram sends every user interaction here as a POST.
-    We parse the Update and feed it to python-telegram-bot's dispatcher.
-    """
+async def setup_bot() -> None:
+    """Called once in lifespan startup — initializes and registers webhook."""
     application = get_application()
+    await application.initialize()
+    await application.start()
 
-    data = await request.json()
-    update = Update.de_json(data, application.bot)
-
-    # Initialize the application if this is the first request
-    if not application.running:
-        await application.initialize()
-        await application.start()
-
-    await application.process_update(update)
-    return Response(content="ok", status_code=200)
-
-
-async def set_webhook() -> bool:
-    """
-    Registers our webhook URL with Telegram.
-    Called once during app startup.
-    """
-    application = get_application()
-    webhook_url = f"{settings.TELEGRAM_WEBHOOK_URL}"
-
-    try:
-        await application.bot.set_webhook(
-            url=webhook_url,
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True,
-        )
-        logger.info(f"Telegram webhook set: {webhook_url}")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to set Telegram webhook: {e}")
-        return False
+    if settings.BOT_TOKEN and settings.TELEGRAM_WEBHOOK_URL:
+        try:
+            await application.bot.set_webhook(
+                url=settings.TELEGRAM_WEBHOOK_URL,
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True,
+            )
+            info = await application.bot.get_webhook_info()
+            logger.info(f"Webhook set: {info.url}")
+            if info.last_error_message:
+                logger.warning(f"Webhook last error: {info.last_error_message}")
+        except Exception as e:
+            logger.error(f"Failed to set webhook: {e}")
+    else:
+        logger.warning("BOT_TOKEN or TELEGRAM_WEBHOOK_URL missing — webhook skipped")
 
 
-async def delete_webhook() -> None:
-    """Called on shutdown to deregister the webhook."""
+async def teardown_bot() -> None:
+    """Called once in lifespan shutdown."""
     try:
         application = get_application()
         await application.bot.delete_webhook()
         await application.stop()
         await application.shutdown()
-        logger.info("Telegram webhook deleted")
+        logger.info("Bot shut down cleanly")
     except Exception as e:
-        logger.warning(f"Error during webhook cleanup: {e}")
+        logger.warning(f"Bot shutdown error: {e}")
+
+
+@router.post("/webhook")
+async def telegram_webhook(request: Request) -> Response:
+    """
+    Telegram POSTs every user interaction here.
+    We parse it and hand it to PTB's dispatcher.
+    """
+    application = get_application()
+
+    try:
+        data = await request.json()
+        update = Update.de_json(data, application.bot)
+        await application.process_update(update)
+    except Exception as e:
+        logger.error(f"Error processing update: {e}", exc_info=True)
+
+    # Always return 200 — Telegram will retry on non-200 forever
+    return Response(content="ok", status_code=200)

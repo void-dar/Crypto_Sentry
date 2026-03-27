@@ -14,7 +14,7 @@ from .db.main import engine
 from .api import wallet, alert, transaction, subscription, webhook, prices
 from .auth.routes import auth, user
 from .services.telegram import close as close_telegram
-from .api.telegram_webhook import delete_webhook, router as telegram_router, set_webhook
+from .api.telegram_webhook import teardown_bot, router as telegram_router, setup_bot
 from .telegram_bot.api_client import api as bot_api_client
 
 logging.basicConfig(
@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
             print("connection established")
             await seed()
             if settings.BOT_TOKEN and settings.TELEGRAM_WEBHOOK_URL:
-                await set_webhook()
+                await setup_bot()
             else:
                 logger.warning(
                     "BOT_TOKEN or TELEGRAM_WEBHOOK_URL not set — bot webhook skipped"
@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("Shutting down...")
     print("Server shutting down....")
-    await delete_webhook()
+    await teardown_bot()
     await bot_api_client.close()
     await close_redis()
     await close_telegram()
@@ -59,7 +59,7 @@ app = FastAPI(
     description="Real-time wallet & whale tracking with Telegram alerts",
     version="1.0.0",
     lifespan=lifespan,
-    docs_url="/docs" if settings.ENVIRONMENT == "development" else None,
+    docs_url="/docs",
     redoc_url=None,
 )
 

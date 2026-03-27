@@ -166,19 +166,37 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 login_conv = ConversationHandler(
     entry_points=[CommandHandler("login", login_start)],
     states={
-        AWAITING_EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, login_email)],
-        AWAITING_PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, login_password)],
+        AWAITING_EMAIL: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, login_email)
+        ],
+        AWAITING_PASSWORD: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, login_password)
+        ],
     },
-    fallbacks=[CommandHandler("cancel", cancel)],
+    fallbacks=[
+        CommandHandler("cancel", cancel),
+        CommandHandler("start", cancel),   # ✅ /start exits the flow
+        CommandHandler("help", cancel),
+    ],
     name="login_conv",
+    persistent=False,
 )
 
 register_conv = ConversationHandler(
     entry_points=[CommandHandler("register", register_start)],
     states={
-        AWAITING_EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, register_collect)],
-        AWAITING_PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, register_password)],
+        AWAITING_EMAIL: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, register_collect)
+        ],
+        AWAITING_PASSWORD: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, register_password)
+        ],
     },
-    fallbacks=[CommandHandler("cancel", cancel)],
+    fallbacks=[
+        CommandHandler("cancel", cancel),
+        CommandHandler("start", cancel),   # ✅
+        CommandHandler("help", cancel),
+    ],
     name="register_conv",
+    persistent=False,
 )
