@@ -17,7 +17,7 @@ async def create_access_token(payload):
     payload['exp'] = expiration_time
     try:
         token = jwt.encode(payload, JWT_SECRET, algorithm=algorithm)
-        return f"Bearer {token}"
+        return token
     except:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create access token")
 
