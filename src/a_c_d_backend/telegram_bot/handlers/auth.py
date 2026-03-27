@@ -78,10 +78,20 @@ async def login_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await api.link_telegram(result["access_token"], chat_id)
 
     me = await api.get_me(result["access_token"])
+    print("User info after login:", me)  # Debug log
+    if me and isinstance(me, dict):
+        username = me.get("username", "User")
+        tier = me.get("tier", "free").upper()
+        text = (
+            f"✅ Logged in as <b>{username}</b>!\n"
+            f"Tier: <b>{tier}</b>\n\n"
+            f"Your Telegram is now linked — you'll receive alerts here."
+        )
+    else:
+        text = "✅ Login successful!\n\nYour Telegram is now linked."
+
     await update.message.reply_text(
-        f"✅ Logged in as <b>{me['username']}</b>!\n"
-        f"Tier: <b>{me['tier'].upper()}</b>\n\n"
-        f"Your Telegram is now linked — you'll receive alerts here.",
+        text,
         parse_mode="HTML",
         reply_markup=main_menu_keyboard(),
     )
