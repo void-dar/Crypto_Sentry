@@ -27,6 +27,7 @@ async def setup_bot() -> None:
 
     if settings.BOT_TOKEN and settings.TELEGRAM_WEBHOOK_URL:
         try:
+            
             await application.bot.set_webhook(
                 url=settings.TELEGRAM_WEBHOOK_URL,
                 allowed_updates=Update.ALL_TYPES,
@@ -46,10 +47,11 @@ async def teardown_bot() -> None:
     """Called once in lifespan shutdown."""
     try:
         application = get_application()
-        await application.bot.delete_webhook()
-        await application.stop()
-        await application.shutdown()
-        logger.info("Bot shut down cleanly")
+        # await application.bot.delete_webhook()
+        # await application.stop()
+        # await application.shutdown()
+        # logger.info("Bot shut down cleanly")
+        print("teardown_bot called")
     except Exception as e:
         logger.warning(f"Bot shutdown error: {e}")
 
