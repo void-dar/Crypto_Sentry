@@ -154,6 +154,7 @@ class BotAPIClient:
 
     async def add_alert(
         self,
+        name: str,
         token: str,
         wallet_id: str,
         alert_type: str,
@@ -161,7 +162,7 @@ class BotAPIClient:
         token_symbol: Optional[str] = None,
     ) -> Optional[dict]:
         try:
-            body: dict[str, Any] = {"type": alert_type}
+            body: dict[str, Any] = {"type": alert_type, "name": name}
             if threshold_amount is not None:
                 body["threshold_amount"] = threshold_amount
             if token_symbol:

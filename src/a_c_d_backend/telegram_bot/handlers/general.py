@@ -1,5 +1,5 @@
 import logging
-
+from telegram.helpers import escape
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -108,8 +108,8 @@ async def subscription_callback(
 
     await query.message.reply_text(
         f"💳 <b>Complete your payment</b>\n\n"
-        f"Click the link below to subscribe to <b>{plan['name']}</b>:\n"
-        f"{url}\n\n"
+        f"Click the link below to subscribe to <b>{escape(plan['name'])}</b>:\n"
+        f"{escape(url)}\n\n"
         f"_Your tier will be upgraded automatically after payment._",
         parse_mode="HTML",
     )
@@ -131,7 +131,7 @@ async def my_alerts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             continue
 
         found_any = True
-        label = wallet.get("label") or wallet["address"][:12] + "…"
+        label = escape(wallet.get("label") or wallet["address"][:12] + "…")
         lines = [f"🔔 <b>Alerts for {label}</b>\n"]
 
         for a in alerts:

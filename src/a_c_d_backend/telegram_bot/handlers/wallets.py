@@ -10,6 +10,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+from telegram.helpers import escape_html
 
 from ..api_client import api
 from ..keyboard import (
@@ -21,6 +22,7 @@ from ..keyboard import (
     wallet_actions_keyboard,
 )
 from ..states import (
+    AWAITING_ALERT_NAME,
     AWAITING_ALERT_THRESHOLD,
     AWAITING_ALERT_TOKEN,
     AWAITING_ALERT_TYPE,
@@ -232,6 +234,7 @@ async def add_alert_start(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     return AWAITING_ALERT_TYPE
 
 
+
 async def alert_type_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
@@ -243,8 +246,26 @@ async def alert_type_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     context.user_data["alert_type"] = alert_type
     context.user_data["alert_wallet_id"] = wallet_id
 
+    # Ask for alert name first
+    await query.message.reply_text(
+        "📝 Enter a name for this alert (e.g., 'Big Whale TX', 'USDC Watch'):\n"
+        "Or send /skip to use default naming.",
+        parse_mode="HTML",
+    )
+    return AWAITING_ALERT_NAME
+
+async def alert_name_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = update.message.text.strip()
+    alert_name = None if text.startswith("/skip") else escape_html(text)
+
+    context.user_data["alert_name"] = alert_name
+
+    # Proceed to threshold or token input based on alert type
+    alert_type = context.user_data["alert_type"]
+    query = update.message
+
     if alert_type == "large_tx":
-        await query.message.reply_text(
+        await query.reply_text(
             "💵 Enter the minimum USD threshold to trigger an alert\n"
             "e.g. <code>10000</code> for $10,000+",
             parse_mode="HTML",
@@ -252,15 +273,15 @@ async def alert_type_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return AWAITING_ALERT_THRESHOLD
 
     elif alert_type == "token_transfer":
-        await query.message.reply_text(
+        await query.reply_text(
             "🪙 Enter the token symbol to watch\ne.g. <code>USDC</code>",
             parse_mode="HTML",
         )
         return AWAITING_ALERT_TOKEN
 
     else:
-        # wallet_activity — no further input needed
-        return await _save_alert(update, context, alert_type, wallet_id)
+        # wallet_activity — save immediately
+        return await _save_alert(update, context, alert_type, context.user_data["alert_wallet_id"])
 
 
 async def alert_threshold_received(
@@ -299,10 +320,11 @@ async def _save_alert(
     token_symbol: Optional[str] = None,
 ) -> int:
     token = context.user_data.get("token")
+    alert_name = context.user_data.get("alert_name")  # new
     msg = update.message or update.callback_query.message
 
     result = await api.add_alert(
-        token, wallet_id, alert_type, threshold, token_symbol
+        token, wallet_id, alert_type, threshold, token_symbol, name=alert_name
     )
 
     if not result or "error" in (result or {}):
@@ -322,14 +344,15 @@ async def _save_alert(
     if token_symbol:
         extra = f"\nToken: <b>{token_symbol}</b>"
 
+    alert_name_text = f"\nName: <b>{alert_name}</b>" if alert_name else ""
+
     await msg.reply_text(
-        f"✅ <b>Alert created!</b>\n"
+        f"✅ <b>Alert created!</b>{alert_name_text}\n"
         f"Type: {label}{extra}",
         parse_mode="HTML",
         reply_markup=main_menu_keyboard(),
     )
     return ConversationHandler.END
-
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("❌ Cancelled.", reply_markup=main_menu_keyboard())
@@ -365,6 +388,9 @@ add_alert_conv = ConversationHandler(
     states={
         AWAITING_ALERT_TYPE: [
             CallbackQueryHandler(alert_type_chosen, pattern="^alert_type:")
+        ],
+        AWAITING_ALERT_NAME: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, alert_name_received)
         ],
         AWAITING_ALERT_THRESHOLD: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, alert_threshold_received)
