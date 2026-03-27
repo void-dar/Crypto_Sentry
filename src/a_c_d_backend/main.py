@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("Shutting down...")
     print("Server shutting down....")
-    await teardown_bot()
+    # await teardown_bot()
     await bot_api_client.close()
     await close_redis()
     await close_telegram()
