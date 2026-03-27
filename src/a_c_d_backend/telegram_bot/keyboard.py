@@ -10,7 +10,7 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
             ["❓ Help"],
         ],
         resize_keyboard=True,
-        persistent=True,
+        is_persistent=True,
     )
 
 
