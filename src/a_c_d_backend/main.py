@@ -30,17 +30,12 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 async def lifespan(app: FastAPI):
     logger.info("Starting Crypto Sentry...")
     print("server is starting")
+    await setup_bot()
     try:
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
             print("connection established")
             await seed()
-            if settings.BOT_TOKEN and settings.TELEGRAM_WEBHOOK_URL:
-                await setup_bot()
-            else:
-                logger.warning(
-                    "BOT_TOKEN or TELEGRAM_WEBHOOK_URL not set — bot webhook skipped"
-                )
     except Exception as e:
         print(f"Connection failed: {e}")
     yield
