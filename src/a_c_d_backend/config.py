@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Telegram
     BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
-    TELEGRAM_WEBHOOK_URL: str = os.getenv("BASE_URL", "") + os.getenv("TELEGRAM_WEBHOOK_PATH")
+    TELEGRAM_WEBHOOK_URL: str = os.getenv("TELEGRAM_WEBHOOK_URL")
 
 
     # Alchemy
