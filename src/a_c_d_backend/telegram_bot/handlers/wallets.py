@@ -10,7 +10,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
-from telegram.helpers import escape_html
+from telegram.helpers import escape_markdown
 
 from ..api_client import api
 from ..keyboard import (
@@ -256,7 +256,7 @@ async def alert_type_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def alert_name_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     text = update.message.text.strip()
-    alert_name = None if text.startswith("/skip") else escape_html(text)
+    alert_name = None if text.startswith("/skip") else escape_markdown(text)
 
     context.user_data["alert_name"] = alert_name
 
