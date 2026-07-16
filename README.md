@@ -42,5 +42,5 @@ cd Crypto_Sentry
 poetry install
 cp .env.example .env  # configure your keys
 alembic upgrade head
-uvicorn src.main:app --reload
+poetry run uvicorn src.main:app --reload
 ```
